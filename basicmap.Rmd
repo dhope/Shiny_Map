@@ -1,0 +1,45 @@
+---
+title: "SiteMap"
+author: "David Hope"
+date: '2016-04-16'
+output: html_document
+---
+
+```{r, echo=FALSE, include=FALSE}
+
+
+library(shiny)
+library(leaflet)
+require(dplyr)
+require(ggplot2)
+# The goal of this project is to create a map of the study region where you can zoom in and see counts
+# The counts can vary based on a box you select.
+setwd('/home/dhope/Dropbox/SFU/ShorebirdSurveyDatabase/ShinyResults/Shiny_Map')
+locations <- read.csv('./.data/sitelocations_decdegree.csv', header = T, stringsAsFactors=F) %>%
+  filter(SITEID != "") %>% mutate(longitude = as.character(lon),
+                                  latitude = as.character(lat))
+
+
+
+
+map <- locations %>% leaflet() %>% 
+  addProviderTiles("OpenStreetMap") %>% 
+  addMarkers(lng = locations$longitude,
+             lat = locations$latitude, 
+             popup = locations$Name,
+             clusterOptions = markerClusterOptions(),
+             options = markerOptions(draggable = FALSE, riseOnHover = TRUE),
+             ) %>%  
+  setView(lng = -124.251,
+          lat = 49.263,
+          zoom = 6)
+
+
+```
+
+
+```{r, echo=FALSE}
+
+map
+```
+
