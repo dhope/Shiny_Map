@@ -44,6 +44,7 @@ shinyUI(bootstrapPage(
                                 
       mainPanel(
     leafletOutput('DataPlot1') )
+#     dataTableOutput('df.out') )
 )
 
 

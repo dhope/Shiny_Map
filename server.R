@@ -9,60 +9,8 @@ library(shiny)
 require(dplyr)
 require(leaflet)
 
+source('dataImport.R')
 
-## Import required data and add to list
-locations <- read.csv('./.data/sitelocations_decdegree.csv', header = T, stringsAsFactors=F) %>%
-  filter(SITEID != "") %>% mutate(longitude = as.character(lon),
-                                  latitude = as.character(lat)) %>% rename(SiteID = SITEID)
-
-wesa       <- read.csv('./.data/wesa.clean.csv') %>%
-  filter(RecordID != 'RecordID' & !is.na(counts.cleaned)) %>%
-  select(RecordID, ID, SiteID, counts.cleaned ) %>%
-  group_by(RecordID) %>% 
-  dplyr::summarize(max.count = max(counts.cleaned, na.rm=T), 
-                   avg.count = mean(counts.cleaned, na.rm=T),
-                   sd.count = sd(counts.cleaned, na.rm = T),
-                   sum.count = sum(counts.cleaned, na.rm = T), 
-                   n.counts = n() )%>%
-  mutate(SiteID = substr(RecordID, 1, 4), 
-         Year = substr(RecordID, 5, 8), 
-         Month = substr(RecordID, 9,9),
-         Day = substr(RecordID, 10, 11),
-         Month.name = ifelse(Month =='7', 'July', 'August')) %>%
-  left_join(locations, by = 'SiteID')
-
-
-all.surveys.info <- wesa %>% select(RecordID, SiteID, Year, Month, Day) %>%
-  mutate (  
-    Year = substr(RecordID, 5, 8), 
-    Month = substr(RecordID, 9,9),
-    Day = substr(RecordID, 10, 11),
-    Date = as.Date(paste(Year, "-" , Month, "-", Day,sep =""), format = "%Y-%m-%d"))
-
-
-falc    <- read.csv( './.data/falc.clean.csv') %>%
-  select(RecordID, SiteID, ID, Count) %>%
-    mutate (  
-      Year = substr(RecordID, 5, 8), 
-      Month = substr(RecordID, 9,9),
-      Day = substr(RecordID, 10, 11),
-      Date = as.Date(paste(Year, "-" , Month, "-", Day,sep =""), format = "%Y-%m-%d")) %>%
-    group_by(RecordID, SiteID, Date, Year, Month) %>%
-    dplyr::summarize(
-      TotalCounts = n(),
-      numberCounted = mean(Count, na.rm=T),
-      observed = 1
-    ) %>%
-    right_join(all.surveys.info, by=c('RecordID', 'SiteID', 'Date', 'Year', 'Month') ) %>%
-    dplyr::mutate(observed.y.n = ifelse(is.na(observed), 0, 1),
-                  count.falc = ifelse(is.na(numberCounted), 0, numberCounted),
-                  Month.name = ifelse(Month =='7', 'July', 'August') ) %>%
-  left_join(locations, by = 'SiteID')
-
-
-
-
-data_ <- list(falc= falc,wesa= wesa,locations= locations)
 
 shinyServer(function(input, output) { 
   
@@ -89,63 +37,74 @@ shinyServer(function(input, output) {
                                                  choices = c('Probability of observation' = 'probs',
                                                              "Total Number Counted" = 'totalobserved',
                                                              "Average Number Counted" = "meanobserved")))
-
+           
     )
   })
-    
+  
   output$controls <- renderUI({
     if (is.null(input$advopt)) {
-        return()
+      return()
     }
     
     if (input$advopt){wellPanel(
-           selectInput("colors", "Color Scheme",
-                choices = rownames(subset(brewer.pal.info, category %in% c("seq", "div"))),
-                selected = "Reds" ),
-          checkboxInput("legend", "Show legend", TRUE) )
-           } else {
-             return()
-           }
+      selectInput("colors", "Color Scheme",
+                  choices = rownames(subset(brewer.pal.info, category %in% c("seq", "div"))),
+                  selected = "Reds" ),
+      checkboxInput("legend", "Show legend", TRUE) )
+    } else {
+      return()
+    }
   })
-
-
-    
+  
+  
+  
+  
   output$DataPlot1 <- renderLeaflet({
     locations %>% leaflet() %>% 
-    addProviderTiles("OpenStreetMap") %>% 
+      addProviderTiles("OpenStreetMap") %>% 
       fitBounds(~min(longitude), ~min(latitude), ~max(longitude), ~max(latitude)) %>%
-#     addMarkers(lng = data_$locations$longitude,
-#                lat = data_$locations$latitude, 
-#                popup = data_$locations$Name,
-#                clusterOptions = markerClusterOptions(),
-#                options = markerOptions(draggable = FALSE, riseOnHover = TRUE),
-#     ) %>%  
-    setView(lng = -124.251,
-            lat = 49.263,
-            zoom = 6)
+      #     addMarkers(lng = data_$locations$longitude,
+      #                lat = data_$locations$latitude, 
+      #                popup = data_$locations$Name,
+      #                clusterOptions = markerClusterOptions(),
+      #                options = markerOptions(draggable = FALSE, riseOnHover = TRUE),
+      #     ) %>%  
+      setView(lng = -124.251,
+              lat = 49.263,
+              zoom = 6)
   })
-
-  observe({
+  
+  # This reactive expression represents the palette function,
+  # which changes as the user makes selections in UI.
+  colorpal <- reactive({
+    # #             if(input$advopt){
+    new.df <- df.out()
+    colorNumeric(input$colors, new.df$output_data)
+    #     }else{ colorNumeric(rownames(subset(brewer.pal.info, category %in% c("seq", "div")))[23], df.out[[data_type]])}
     
-    data_type <<- input$data_type
-    age <- input$age
-    years <- input$yrs
-    species <- input$species
-    df <- data_[[species]] %>% filter(Year %in% years & Month.name %in% age) 
-    
-    if (species == 'wesa') {
-    df.out <<- 
-      df %>% mutate(total.counted = sum(max.count)) %>% filter(!is.na(max.count)) %>%
-      group_by(SiteID,latitude,longitude) %>%
-          dplyr::summarize(
-            n_counts = n(),
-            sum_count = sum(max.count, na.rm=T),
-            mean_count = mean(max.count, na.rm=T) ) %>%
-      ungroup %>%
-      mutate(prop_count = sum_count / sum(sum_count))
-    }
-    if (species == 'falc') {
-      df.out <- df %>%
+  })
+  
+#   
+#   observe(label = 'subset data',priority = 5, {
+  df.out <- reactive({
+    if (input$species == 'wesa') {
+        data_[[input$species]] %>% filter(Year %in% input$yrs & Month.name %in% input$age) %>%
+        mutate(total.counted = sum(max.count)) %>% filter(!is.na(max.count)) %>%
+        group_by(SiteID,latitude,longitude) %>%
+        dplyr::summarize(
+          n_counts = n(),
+          sum_count = sum(max.count, na.rm=T),
+          mean_count = mean(max.count, na.rm=T) ) %>%
+        ungroup %>%
+        mutate(prop_count = sum_count / sum(sum_count)) %>%
+        select_("SiteID", "latitude", "longitude", input$data_type )%>%
+        rename_(output_data = input$data_type) }
+  })
+#     }
+         
+df.out.falc <- reactive({  
+  if (input$species == 'falc') { 
+      data_[[input$species]] %>% filter(Year %in% input$yrs & Month.name %in% input$age) %>%
         group_by(SiteID, latitude, longitude) %>%
         dplyr::summarize(
           totalobserved = sum(count.falc, na.rm=T),
@@ -153,65 +112,39 @@ shinyServer(function(input, output) {
           n.obs = sum(observed.y.n),
           n.days = n(),
           probs = (n.obs/n.days)
-          )
+        ) %>%
+        select_("latitude", "longitude", input$data_type ) %>%
+        rename_(output_data = input$data_type)
       
-    }
-    
-    # This reactive expression represents the palette function,
-    # which changes as the user makes selections in UI.
-    colorpal <<- reactive({
-#             if(input$advopt){
-      colorNumeric(input$colors, df.out[[input$data_type]])
-#     }else{ colorNumeric(rownames(subset(brewer.pal.info, category %in% c("seq", "div")))[23], df.out[[data_type]])}
-      
-    })
-    
-    require(htmltools)
+  }
+
+
+  })
     
     
-    #print(df.out)
+  observe({
+    if (input$species == 'wesa') {
+    df.new <- df.out()
+    } else{df.new <- df.out.falc()}
     pal <- colorpal()
-    leafletProxy('DataPlot1', data = df.out) %>% 
-#       clearPopups() %>%
+    leafletProxy('DataPlot1', data = df.new) %>% 
+      #       clearPopups() %>%
       clearMarkers() %>%
-      addCircleMarkers(data = df.out, lng = ~longitude,
+      addCircleMarkers(data = df.new, lng = ~longitude,
                        lat = ~latitude,
                        color = "#777777",
-                        fillOpacity = 0.7,
-                      fillColor = ~pal(df.out[[data_type]]),
+                       fillOpacity = 0.7,
+                       fillColor = ~pal(output_data),
                        stroke = F,
-#                        weight = df.out[[data_type]]+1,
-                 popup = paste('Site: ', df.out[['SiteID']], '<br/>',
-                               data_type,":" , df.out[[data_type]]) )
-#                  clusterOptions = markerClusterOptions(),
-#                  options = markerOptions(draggable = FALSE, riseOnHover = TRUE))
-    })
-# 
-# observe({
-#   
-#   proxy <- leafletProxy('DataPlot1', data = df.out) 
-#   # Remove any existing legend, and only if the legend is
-#   # enabled, create a new one.
-#   proxy %>% clearControls()
-#   if (is.null(input$legend)) {
-#     do.you.want.a.legend <- TRUE
-#   } else{ do.you.want.a.legend <- input$legend}
-#   if (do.you.want.a.legend) {
-#     
-#     pal <- colorpal()
-# #     print(pal)
-# #     print(data_type)
-#     proxy %>% addLegend(position = "bottomleft",opacity = 1,
-#                         pal = pal, values = df.out[[data_type]]
-#     )
-#   }            
-#     })
-# 
-#     
-    })
+                       #                        weight = df.out[[data_type]]+1,
+                       popup = paste('Site: ', as.character(df.new$SiteID), '<br/>',
+                                     input$data_type,":" , df.new$output_data) )
+    
+    #                  clusterOptions = markerClusterOptions(),
+    #                  options = markerOptions(draggable = FALSE, riseOnHover = TRUE))
+  })
 
-
-
+})
 
 
 
