@@ -31,10 +31,11 @@ shinyUI(bootstrapPage(
                          choices = c('July','August'),
                          selected = 'July'),
       
-      # This outputs the dynamic UI component
-      wellPanel(uiOutput("ui")),
+      
       
       checkboxInput(inputId = 'advopt', label = "Advanced Options", value = TRUE),
+      # This outputs the dynamic UI component
+      wellPanel(uiOutput("ui")),
       
       uiOutput('controls')
     ),

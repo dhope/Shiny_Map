@@ -6,12 +6,12 @@ locations <- read.csv('./.data/sitelocations_decdegree.csv', header = T, strings
   filter(SITEID != "") %>% mutate(longitude = as.character(lon),
                                   latitude = as.character(lat)) %>% rename(SiteID = SITEID)
 
-site.info  <- read.csv( './.data/site.info.clean.csv')
+site.info  <- read.csv( './.data/site.info.clean.csv', stringsAsFactor = F)
 
 
 
 
-wesa       <- read.csv('./.data/wesa.clean.csv') %>%
+wesa       <- read.csv('./.data/wesa.clean.csv', stringsAsFactor = F) %>%
   filter(RecordID != 'RecordID' & !is.na(counts.cleaned)) %>%
   select(RecordID, ID, SiteID, counts.cleaned ) %>%
   group_by(RecordID) %>% 
@@ -59,9 +59,10 @@ all.surveys.info <- wesa %>% select(RecordID, SiteID, Year, Month, Day) %>%
     Date = as.Date(paste(Year, "-" , Month, "-", Day,sep =""), format = "%Y-%m-%d"))
 
 
-falc    <- read.csv( './.data/falc.clean.csv') %>%
+falc    <- read.csv( './.data/falc.clean.csv', stringsAsFactor = F) %>%
   select(RecordID, SiteID, ID, Count) %>%
     mutate (  
+      Count = as.numeric(Count),
       Year = substr(RecordID, 5, 8), 
       Month = substr(RecordID, 9,9),
       Day = substr(RecordID, 10, 11),

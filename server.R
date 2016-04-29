@@ -23,20 +23,23 @@ shinyServer(function(input, output) {
     # Depending on input$input_type, we'll generate a different
     # UI component and send it to the client.
     switch(input$species,
-           'wesa' = tags$div(title = "Choose the type of data you'd like to see",
-                             selectInput(inputId = 'data_type', 
+           'wesa' = #tags$div(title = "Choose the type of data you'd like to see",
+                             selectInput(inputId = 'data_type',
                                          label = 'Data type',
                                          choices =c("Number of Counts" = 'n_counts', 
                                                     'Total number counted' = 'sum_count', 
                                                     'Average number counted' = 'mean_count',
                                                     'Proportion of Monthly Total'= 'prop_count' 
-                                         ) )) ,
+                                         ),
+                                         selected = 'n_counts'
+                                         ),#) ,
            'falc' = conditionalPanel(condition = 'input$species == falc',
                                      selectInput(inputId = 'data_type',
                                                  label = 'Data type',
                                                  choices = c('Probability of observation' = 'probs',
                                                              "Total Number Counted" = 'totalobserved',
-                                                             "Average Number Counted" = "meanobserved")))
+                                                             "Average Number Counted" = "meanobserved"),
+                                                 selected = 'probs'))
            
     )
   })
@@ -81,20 +84,14 @@ shinyServer(function(input, output) {
               zoom = 6)
   })
   
-  # This reactive expression represents the palette function,
-  # which changes as the user makes selections in UI.
-  colorpal <- reactive({
-    # #             if(input$advopt){
-    new.df <- df.out()
-    colorBin(input$colors, new.df$output_data,bins = 5)
-    #     }else{ colorNumeric(rownames(subset(brewer.pal.info, category %in% c("seq", "div")))[23], df.out[[data_type]])}
-    
-  })
+
   
 #   
 #   observe(label = 'subset data',priority = 5, {
   df.out <- reactive({
-    if (input$species == 'wesa') {
+
+    if (is.null(input$species) | is.null(input$data_type)) {data_i <- data_[[input$species]];data_i }else{     data_type <- input$data_type
+      if(input$species == 'wesa') {
       data_i <- 
         data_[[input$species]] %>% filter(Year %in% input$yrs & Month.name %in% input$age) %>%
         mutate(total.counted = sum(max.count)) %>% filter(!is.na(max.count)) %>%
@@ -105,8 +102,8 @@ shinyServer(function(input, output) {
           mean_count = mean(max.count, na.rm=T) ) %>%
         ungroup %>%
         mutate(prop_count = sum_count / sum(sum_count)) %>%
-        select_("SiteID", "latitude", "longitude", input$data_type )%>%
-        rename_(output_data = input$data_type) }
+#         select_("SiteID", "latitude", "longitude", input$data_type )%>%
+        rename_("output_data" = paste0(data_type)) }  else{
 
     if (input$species == 'falc') { 
       data_i <- 
@@ -122,20 +119,37 @@ shinyServer(function(input, output) {
           select_("latitude", "longitude", input$data_type ) %>%
           rename_(output_data = input$data_type)
         
-    }
+    }}}
   data_i
 
 
   })
-    
-    
-observe({
+
+
+# This reactive expression represents the palette function,
+# which changes as the user makes selections in UI.
+colorpal <- reactive({
+  if (is.null(input$species) | is.null(input$data_type) | is.null(input$advopt)) {colorNumeric('Reds', wesa$max.count)} else{
+  if(input$advopt){
+    new.df <- df.out()
+    colorBin(input$colors, new.df$output_data,bins = 5)
+  }else{ colorNumeric(rownames(subset(brewer.pal.info, category %in% c("seq", "div")))[23], df.out())}
+  
+}})
+
+# observeEvent(input$data_type,{
+#   print(input$data_type)
+# #   print(df.out())
+# })
+#     
+observeEvent({list(df.out() , input$maptypes, input$colors)},{
+      if(!is.null(input$data_type)){
 #     if (input$species == 'wesa') {
     df.new <- df.out()
 #     print(isolate(df.new))
 #     } else{df.new <- df.out.falc()}
     pal <- colorpal()
-    leafletProxy('DataPlot1', data =  df.out()) %>% 
+    leafletProxy('DataPlot1', data =  df.new) %>% 
     clearTiles() %>%
   addProviderTiles(input$maptypes) %>%
             clearPopups() %>%
@@ -152,16 +166,18 @@ observe({
     
     #                  clusterOptions = markerClusterOptions(),
     #                  options = markerOptions(draggable = FALSE, riseOnHover = TRUE))
+      }
   })
-
+# 
 observe(priority = -1, {
+  if(!is.null(input$data_type)){
 #   if (input$species == 'wesa') {
     df.new <- df.out()
 #   } else{df.new <- df.out.falc()}
   proxy <- leafletProxy('DataPlot1', data = df.new) 
   # Remove any existing legend, and only if the legend is
   # enabled, create a new one.
-  proxy %>% clearControls()
+  proxy %>% clearControls() 
   if (is.null(input$legend)) {
     do.you.want.a.legend <- TRUE
   } else{ do.you.want.a.legend <- input$legend}
@@ -171,8 +187,8 @@ observe(priority = -1, {
     #     print(pal)
     #     print(data_type)
     proxy %>% addLegend(position = "topright",opacity = .7,
-                        pal = pal, values = df.new[["output_data"]],bins = 8  )
-  }            
+                        pal = pal, values = df.new[["output_data"]] )
+  } }           
 })
 
 # observe({
