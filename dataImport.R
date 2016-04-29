@@ -6,6 +6,11 @@ locations <- read.csv('./.data/sitelocations_decdegree.csv', header = T, strings
   filter(SITEID != "") %>% mutate(longitude = as.character(lon),
                                   latitude = as.character(lat)) %>% rename(SiteID = SITEID)
 
+site.info  <- read.csv( './.data/site.info.clean.csv')
+
+
+
+
 wesa       <- read.csv('./.data/wesa.clean.csv') %>%
   filter(RecordID != 'RecordID' & !is.na(counts.cleaned)) %>%
   select(RecordID, ID, SiteID, counts.cleaned ) %>%
@@ -21,6 +26,29 @@ wesa       <- read.csv('./.data/wesa.clean.csv') %>%
          Day = substr(RecordID, 10, 11),
          Month.name = ifelse(Month =='7', 'July', 'August')) %>%
   left_join(locations, by = 'SiteID')
+
+
+# Compile zero counts -----------------------------------------------------
+records <- unique(wesa$RecordID)
+zero.counts <- 
+  site.info %>%
+  filter(!(RecordID %in% records)) %>%
+  select(-X, -SiteName) %>%
+  left_join(locations, by = 'SiteID')  %>% #RecordID, SiteID, Year, Month, Day, SiteName, OnlineName, size) 
+  mutate(Year = substr(RecordID, 5, 8), 
+         Month = substr(RecordID, 9,9),
+         Day = substr(RecordID, 10, 11),
+         Month.name = ifelse(Month =='7', 'July', 'August'))
+
+zero.counts$max.count <- 0
+zero.counts$avg.count <- 0
+zero.counts$sd.count <- NA
+zero.counts$sum.count <- 0
+zero.counts$n.counts <- NA
+name.list <- c(names(wesa))
+zero.counts <- zero.counts %>% select(which(names(.) %in% name.list))
+wesa <- rbind(wesa, zero.counts) 
+
 
 
 all.surveys.info <- wesa %>% select(RecordID, SiteID, Year, Month, Day) %>%

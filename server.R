@@ -50,7 +50,14 @@ shinyServer(function(input, output) {
       selectInput("colors", "Color Scheme",
                   choices = rownames(subset(brewer.pal.info, category %in% c("seq", "div"))),
                   selected = "Reds" ),
-      checkboxInput("legend", "Show legend", TRUE) )
+      checkboxInput("legend", "Show legend", TRUE),
+      selectInput("maptypes", "Background map",
+                  choices = c("MapQuestOpen.Aerial",
+                    "Stamen.TerrainBackground",
+                    "Esri.WorldImagery",
+                    "OpenStreetMap",
+                    "Stamen.Watercolor"),
+                  selected = "OpenStreetMap"))
     } else {
       return()
     }
@@ -61,7 +68,7 @@ shinyServer(function(input, output) {
   
   output$DataPlot1 <- renderLeaflet({
     locations %>% leaflet() %>% 
-      addProviderTiles("OpenStreetMap") %>% 
+      addProviderTiles(input$maptypes) %>% 
       fitBounds(~min(longitude), ~min(latitude), ~max(longitude), ~max(latitude)) %>%
       #     addMarkers(lng = data_$locations$longitude,
       #                lat = data_$locations$latitude, 
@@ -79,7 +86,7 @@ shinyServer(function(input, output) {
   colorpal <- reactive({
     # #             if(input$advopt){
     new.df <- df.out()
-    colorNumeric(input$colors, new.df$output_data)
+    colorBin(input$colors, new.df$output_data,bins = 5)
     #     }else{ colorNumeric(rownames(subset(brewer.pal.info, category %in% c("seq", "div")))[23], df.out[[data_type]])}
     
   })
@@ -88,6 +95,7 @@ shinyServer(function(input, output) {
 #   observe(label = 'subset data',priority = 5, {
   df.out <- reactive({
     if (input$species == 'wesa') {
+      data_i <- 
         data_[[input$species]] %>% filter(Year %in% input$yrs & Month.name %in% input$age) %>%
         mutate(total.counted = sum(max.count)) %>% filter(!is.na(max.count)) %>%
         group_by(SiteID,latitude,longitude) %>%
@@ -99,37 +107,39 @@ shinyServer(function(input, output) {
         mutate(prop_count = sum_count / sum(sum_count)) %>%
         select_("SiteID", "latitude", "longitude", input$data_type )%>%
         rename_(output_data = input$data_type) }
-  })
-#     }
-         
-df.out.falc <- reactive({  
-  if (input$species == 'falc') { 
-      data_[[input$species]] %>% filter(Year %in% input$yrs & Month.name %in% input$age) %>%
-        group_by(SiteID, latitude, longitude) %>%
-        dplyr::summarize(
-          totalobserved = sum(count.falc, na.rm=T),
-          meanobserved = mean(count.falc, na.rm=T),
-          n.obs = sum(observed.y.n),
-          n.days = n(),
-          probs = (n.obs/n.days)
-        ) %>%
-        select_("latitude", "longitude", input$data_type ) %>%
-        rename_(output_data = input$data_type)
-      
-  }
+
+    if (input$species == 'falc') { 
+      data_i <- 
+        data_[[input$species]] %>% filter(Year %in% input$yrs & Month.name %in% input$age) %>%
+          group_by(SiteID, latitude, longitude) %>%
+          dplyr::summarize(
+            totalobserved = sum(count.falc, na.rm=T),
+            meanobserved = mean(count.falc, na.rm=T),
+            n.obs = sum(observed.y.n, na.rm=T),
+            n.days = n(),
+            probs = (n.obs/n.days)
+          ) %>%
+          select_("latitude", "longitude", input$data_type ) %>%
+          rename_(output_data = input$data_type)
+        
+    }
+  data_i
 
 
   })
     
     
-  observe({
-    if (input$species == 'wesa') {
+observe({
+#     if (input$species == 'wesa') {
     df.new <- df.out()
-    } else{df.new <- df.out.falc()}
+#     print(isolate(df.new))
+#     } else{df.new <- df.out.falc()}
     pal <- colorpal()
-    leafletProxy('DataPlot1', data = df.new) %>% 
-      #       clearPopups() %>%
-      clearMarkers() %>%
+    leafletProxy('DataPlot1', data =  df.out()) %>% 
+    clearTiles() %>%
+  addProviderTiles(input$maptypes) %>%
+            clearPopups() %>%
+      clearMarkers() %>% clearShapes() %>%
       addCircleMarkers(data = df.new, lng = ~longitude,
                        lat = ~latitude,
                        color = "#777777",
@@ -143,6 +153,32 @@ df.out.falc <- reactive({
     #                  clusterOptions = markerClusterOptions(),
     #                  options = markerOptions(draggable = FALSE, riseOnHover = TRUE))
   })
+
+observe(priority = -1, {
+#   if (input$species == 'wesa') {
+    df.new <- df.out()
+#   } else{df.new <- df.out.falc()}
+  proxy <- leafletProxy('DataPlot1', data = df.new) 
+  # Remove any existing legend, and only if the legend is
+  # enabled, create a new one.
+  proxy %>% clearControls()
+  if (is.null(input$legend)) {
+    do.you.want.a.legend <- TRUE
+  } else{ do.you.want.a.legend <- input$legend}
+  if (do.you.want.a.legend) {
+    
+    pal <- colorpal()
+    #     print(pal)
+    #     print(data_type)
+    proxy %>% addLegend(position = "topright",opacity = .7,
+                        pal = pal, values = df.new[["output_data"]],bins = 8  )
+  }            
+})
+
+# observe({
+# data_clear <- df.out()
+# if (nrow(data_clear)) {  leafletProxy('DataPlot1') %>% clearControls() %>% clearMarkers()}
+# })
 
 })
 
