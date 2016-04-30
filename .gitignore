@@ -19,3 +19,5 @@ vignettes/*.pdf
 .httr-oauth
 
 .Rproj.user
+AWS_instructions.txt
+Shiny_Map.pem

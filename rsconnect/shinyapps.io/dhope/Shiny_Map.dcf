@@ -2,6 +2,6 @@ name: Shiny_Map
 account: dhope
 server: shinyapps.io
 appId: 99042
-bundleId: 438139
+bundleId: 438227
 url: https://dhope.shinyapps.io/Shiny_Map/
-when: 1461971404.91837
+when: 1461990199.34601
