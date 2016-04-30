@@ -83,3 +83,13 @@ falc    <- read.csv( './.data/falc.clean.csv', stringsAsFactor = F) %>%
 
 
 data_ <- list(falc= falc,wesa= wesa,locations= locations)
+
+
+WESAchoices <- c("Number of Counts" = 'n_counts', 
+           'Total number counted' = 'sum_count', 
+           'Average number counted' = 'mean_count',
+           'Percentage of Monthly Total'= 'prop_count' )
+
+FALCchoices <-  c('Probability of observation' = 'probs',
+                                                  "Total Number Counted" = 'totalobserved',
+                                                  "Average Number Counted" = "meanobserved")

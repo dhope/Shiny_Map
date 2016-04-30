@@ -36,6 +36,23 @@ shinyUI(bootstrapPage(
       checkboxInput(inputId = 'advopt', label = "Advanced Options", value = TRUE),
       # This outputs the dynamic UI component
       wellPanel(uiOutput("ui")),
+#       conditionalPanel(condition = "input.species == 'wesa'",
+#                        selectInput(inputId = 'data_type',
+#                                                                             label = 'Data type',
+#                                                                             choices =c("Number of Counts" = 'n_counts', 
+#                                                                                        'Total number counted' = 'sum_count', 
+#                                                                                        'Average number counted' = 'mean_count',
+#                                                                                        'Proportion of Monthly Total'= 'prop_count' 
+#                                                                             ),
+#                                                                             selected = 'n_counts'
+#                                                                             )),
+#       conditionalPanel(condition = "input.species == 'falc'",
+#                                              selectInput(inputId = 'data_type',
+#                                                 label = 'Data type',
+#                                                 choices = c('Probability of observation' = 'probs',
+#                                                             "Total Number Counted" = 'totalobserved',
+#                                                             "Average Number Counted" = "meanobserved"),
+#                                                 selected = 'probs')),
       
       uiOutput('controls')
     ),

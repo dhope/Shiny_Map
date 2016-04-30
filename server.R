@@ -26,19 +26,13 @@ shinyServer(function(input, output) {
            'wesa' = #tags$div(title = "Choose the type of data you'd like to see",
                              selectInput(inputId = 'data_type',
                                          label = 'Data type',
-                                         choices =c("Number of Counts" = 'n_counts', 
-                                                    'Total number counted' = 'sum_count', 
-                                                    'Average number counted' = 'mean_count',
-                                                    'Proportion of Monthly Total'= 'prop_count' 
-                                         ),
+                                         choices =WESAchoices,
                                          selected = 'n_counts'
                                          ),#) ,
            'falc' = conditionalPanel(condition = 'input$species == falc',
                                      selectInput(inputId = 'data_type',
                                                  label = 'Data type',
-                                                 choices = c('Probability of observation' = 'probs',
-                                                             "Total Number Counted" = 'totalobserved',
-                                                             "Average Number Counted" = "meanobserved"),
+                                                 choices = FALCchoices,
                                                  selected = 'probs'))
            
     )
@@ -85,39 +79,41 @@ shinyServer(function(input, output) {
   })
   
 
+species_data <- reactive({data_[[input$species]]})
+
   
 #   
 #   observe(label = 'subset data',priority = 5, {
   df.out <- reactive({
-
-    if (is.null(input$species) | is.null(input$data_type)) {data_i <- data_[[input$species]];data_i }else{     data_type <- input$data_type
+    if (is.null(input$species) | is.null(input$data_type)) {data_i <- data_[[input$species]];data_i }
+    else{     data_type <- input$data_type
       if(input$species == 'wesa') {
       data_i <- 
-        data_[[input$species]] %>% filter(Year %in% input$yrs & Month.name %in% input$age) %>%
+        species_data() %>% filter(Year %in% input$yrs & Month.name %in% input$age) %>%
         mutate(total.counted = sum(max.count)) %>% filter(!is.na(max.count)) %>%
         group_by(SiteID,latitude,longitude) %>%
         dplyr::summarize(
           n_counts = n(),
           sum_count = sum(max.count, na.rm=T),
-          mean_count = mean(max.count, na.rm=T) ) %>%
+          mean_count = round(mean(max.count, na.rm=T),2) ) %>%
         ungroup %>%
-        mutate(prop_count = sum_count / sum(sum_count)) %>%
+        mutate(prop_count = round(sum_count / sum(sum_count)* 100,2)) %>%
 #         select_("SiteID", "latitude", "longitude", input$data_type )%>%
-        rename_("output_data" = paste0(data_type)) }  else{
+        mutate_("output_data" = paste0(data_type)) }  else{
 
     if (input$species == 'falc') { 
       data_i <- 
-        data_[[input$species]] %>% filter(Year %in% input$yrs & Month.name %in% input$age) %>%
+        species_data() %>% filter(Year %in% input$yrs & Month.name %in% input$age) %>%
           group_by(SiteID, latitude, longitude) %>%
           dplyr::summarize(
-            totalobserved = sum(count.falc, na.rm=T),
-            meanobserved = mean(count.falc, na.rm=T),
+            totalobserved = round(sum(count.falc, na.rm=T), 2),
+            meanobserved = round(mean(count.falc, na.rm=T),2),
             n.obs = sum(observed.y.n, na.rm=T),
             n.days = n(),
-            probs = (n.obs/n.days)
+            probs = round(n.obs/n.days,3)
           ) %>%
           select_("latitude", "longitude", input$data_type ) %>%
-          rename_(output_data = input$data_type)
+          mutate_("output_data" = input$data_type)
         
     }}}
   data_i
@@ -142,8 +138,12 @@ colorpal <- reactive({
 # #   print(df.out())
 # })
 #     
-observeEvent({list(df.out() , input$maptypes, input$colors)},{
+observeEvent({list( input$yrs, input$age, input$data_type , input$maptypes, input$colors)},{
       if(!is.null(input$data_type)){
+        species_choices <- switch(input$species,
+                                            'wesa' = WESAchoices,
+                                            'falc' = FALCchoices)
+        data_label <- names(species_choices[species_choices==input$data_type])
 #     if (input$species == 'wesa') {
     df.new <- df.out()
 #     print(isolate(df.new))
@@ -162,14 +162,14 @@ observeEvent({list(df.out() , input$maptypes, input$colors)},{
                        stroke = F,
                        #                        weight = df.out[[data_type]]+1,
                        popup = paste('Site: ', as.character(df.new$SiteID), '<br/>',
-                                     input$data_type,":" , df.new$output_data) )
+                                     isolate(data_label),":" , df.new$output_data) )
     
     #                  clusterOptions = markerClusterOptions(),
     #                  options = markerOptions(draggable = FALSE, riseOnHover = TRUE))
       }
   })
-# 
-observe(priority = -1, {
+# # 
+observeEvent(list( input$yrs, input$age, input$data_type , input$maptypes, input$colors), {
   if(!is.null(input$data_type)){
 #   if (input$species == 'wesa') {
     df.new <- df.out()
