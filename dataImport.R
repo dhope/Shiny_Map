@@ -6,12 +6,12 @@ locations <- read.csv('./.data/sitelocations_decdegree.csv', header = T, strings
   filter(SITEID != "") %>% mutate(longitude = as.character(lon),
                                   latitude = as.character(lat)) %>% rename(SiteID = SITEID)
 
-site.info  <- read.csv( './.data/site.info.clean.csv', stringsAsFactor = F)
+site.info  <- read.csv( './.data/siteInfo2shiny.csv', stringsAsFactor = F)
 
 
 
 
-wesa       <- read.csv('./.data/wesa.clean.csv', stringsAsFactor = F) %>%
+wesa       <- read.csv('./.data/wesa4shiny.csv', stringsAsFactor = F) %>%
   filter(RecordID != 'RecordID' & !is.na(counts.cleaned)) %>%
   select(RecordID, ID, SiteID, counts.cleaned ) %>%
   group_by(RecordID) %>% 

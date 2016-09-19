@@ -23,8 +23,8 @@ shinyUI(bootstrapPage(
     
       checkboxGroupInput(inputId = 'yrs', 
                          label = 'Years',
-                         choices = c('2013','2014','2015'),
-                         selected = c('2013','2014','2015')),
+                         choices = c('2013','2014','2015', '2016'),
+                         selected = c('2013','2014','2015', '2016')),
       
       checkboxGroupInput(inputId = 'age', 
                          label = 'Month',
