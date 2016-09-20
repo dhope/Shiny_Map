@@ -59,8 +59,8 @@ all.surveys.info <- wesa %>% select(RecordID, SiteID, Year, Month, Day) %>%
     Date = as.Date(paste(Year, "-" , Month, "-", Day,sep =""), format = "%Y-%m-%d"))
 
 
-falc    <- read.csv( './.data/falc.clean.csv', stringsAsFactor = F) %>%
-  select(RecordID, SiteID, ID, Count) %>%
+falc    <- read.csv( './.data/falcons2shiny.csv', stringsAsFactor = F) %>%
+  # select(RecordID, SiteID, ID, Count) %>%
     mutate (  
       Count = as.numeric(Count),
       Year = substr(RecordID, 5, 8), 
