@@ -60,8 +60,8 @@ shinyUI(bootstrapPage(
       
 
                                 
-      mainPanel(
-    leafletOutput('DataPlot1') )
+      mainPanel(width=7,
+    leafletOutput('DataPlot1', height = 750 ) )
 #     dataTableOutput('df.out') )
 )
 
