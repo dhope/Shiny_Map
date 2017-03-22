@@ -3,8 +3,9 @@ require(dplyr)
 
 ## Import required data and add to list
 locations <- read.csv('./.data/sitelocations_decdegree.csv', header = T, stringsAsFactors=F) %>%
-  filter(SITEID != "") %>% mutate(longitude = as.character(lon),
-                                  latitude = as.character(lat)) %>% rename(SiteID = SITEID)
+  filter(SITEID != "") %>% mutate(longitude = lon,#as.character(lon),
+                                  latitude = lat) %>% #as.character(lat)) %>% 
+                                    rename(SiteID = SITEID)
 
 site.info  <- read.csv( './.data/siteInfo2shiny.csv', stringsAsFactor = F)
 
