@@ -23,8 +23,8 @@ shinyUI(bootstrapPage(
     
       checkboxGroupInput(inputId = 'yrs', 
                          label = 'Years',
-                         choices = c('2013','2014','2015'),
-                         selected = c('2013','2014','2015')),
+                         choices = c('2013','2014','2015', '2016', '2017'),
+                         selected = c('2013','2014','2015', '2016', '2017')),
       
       checkboxGroupInput(inputId = 'age', 
                          label = 'Month',
@@ -60,8 +60,8 @@ shinyUI(bootstrapPage(
       
 
                                 
-      mainPanel(
-    leafletOutput('DataPlot1') )
+      mainPanel(width=7,
+    leafletOutput('DataPlot1', height = 750 ) )
 #     dataTableOutput('df.out') )
 )
 

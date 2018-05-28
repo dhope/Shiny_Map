@@ -21,3 +21,6 @@ vignettes/*.pdf
 .Rproj.user
 AWS_instructions.txt
 Shiny_Map.pem
+aws_shiny_year2.pem
+
+

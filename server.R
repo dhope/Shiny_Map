@@ -147,9 +147,11 @@ observeEvent({list( input$yrs, input$age, input$data_type , input$maptypes, inpu
 #     if (input$species == 'wesa') {
     df.new <- df.out()
 #     print(isolate(df.new))
+    # sites <- c("GRIC", "NJEN", "SJEN")
+    # print(isolate(filter(df.new, SiteID %in% sites)))
 #     } else{df.new <- df.out.falc()}
     pal <- colorpal()
-    leafletProxy('DataPlot1', data =  df.new) %>% 
+    leafletProxy('DataPlot1', data = df.new) %>% 
     clearTiles() %>%
   addProviderTiles(input$maptypes) %>%
             clearPopups() %>%

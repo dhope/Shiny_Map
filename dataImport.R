@@ -3,15 +3,16 @@ require(dplyr)
 
 ## Import required data and add to list
 locations <- read.csv('./.data/sitelocations_decdegree.csv', header = T, stringsAsFactors=F) %>%
-  filter(SITEID != "") %>% mutate(longitude = as.character(lon),
-                                  latitude = as.character(lat)) %>% rename(SiteID = SITEID)
+  filter(SITEID != "") %>% mutate(longitude = lon,#as.character(lon),
+                                  latitude = lat) %>% #as.character(lat)) %>% 
+                                    rename(SiteID = SITEID)
 
-site.info  <- read.csv( './.data/site.info.clean.csv', stringsAsFactor = F)
+site.info  <- read.csv( './.data/siteInfo2shiny.csv', stringsAsFactor = F)
 
 
 
 
-wesa       <- read.csv('./.data/wesa.clean.csv', stringsAsFactor = F) %>%
+wesa       <- read.csv('./.data/wesa4shiny.csv', stringsAsFactor = F) %>%
   filter(RecordID != 'RecordID' & !is.na(counts.cleaned)) %>%
   select(RecordID, ID, SiteID, counts.cleaned ) %>%
   group_by(RecordID) %>% 
@@ -59,8 +60,8 @@ all.surveys.info <- wesa %>% select(RecordID, SiteID, Year, Month, Day) %>%
     Date = as.Date(paste(Year, "-" , Month, "-", Day,sep =""), format = "%Y-%m-%d"))
 
 
-falc    <- read.csv( './.data/falc.clean.csv', stringsAsFactor = F) %>%
-  select(RecordID, SiteID, ID, Count) %>%
+falc    <- read.csv( './.data/falcons2shiny.csv', stringsAsFactor = F) %>%
+  # select(RecordID, SiteID, ID, Count) %>%
     mutate (  
       Count = as.numeric(Count),
       Year = substr(RecordID, 5, 8), 

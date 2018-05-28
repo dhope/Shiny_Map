@@ -1,0 +1,55 @@
+https://www.ivankuznetsov.com/2010/02/no-space-left-on-device-running-out-of-inodes.html
+
+
+	
+
+One of our development servers went down today. Problems started with deployment script that claimed that claimed “No space left on device”, although partition was not nearly full. If you ever run into such trouble – most likely you have too many small or 0-sized files on your disk, and while you have enough disk space, you have exhausted all available Inodes. Below is the solution for this problem.
+
+1. check available disk space to ensure that you still have some
+
+$ df
+
+Filesystem           1K-blocks      Used Available Use% Mounted on
+/dev/xvda             33030016  10407780  22622236  32% /
+tmpfs                   368748         0    368748   0% /lib/init/rw
+varrun                  368748        56    368692   1% /var/run
+varlock                 368748         0    368748   0% /var/lock
+udev                    368748       108    368640   1% /dev
+tmpfs                   368748         0    368748   0% /dev/shm
+
+2. check available Inodes
+
+$ df -i
+
+Filesystem            Inodes   IUsed   IFree IUse% Mounted on
+/dev/xvda            2080768 2080768       0  100% /
+tmpfs                  92187       3   92184    1% /lib/init/rw
+varrun                 92187      38   92149    1% /var/run
+varlock                92187       4   92183    1% /var/lock
+udev                   92187    4404   87783    5% /dev
+tmpfs                  92187       1   92186    1% /dev/shm
+
+If you have IUse% at 100 or near, then huge number of small files is the reason for “No space left on device” errors.
+
+3. find those little bastards
+
+$ for i in /*; do echo $i; find $i |wc -l; done
+
+This command will list directories and number of files in them. Once you see a directory with unusually high number of files (or command just hangs over calculation for a long time), repeat the command for that directory to see where exactly the small files are.
+
+$ for i in /home/*; do echo $i; find $i |wc -l; done
+
+4. once you found the suspect – just delete the files
+
+$ sudo rm -rf /home/bad_user/directory_with_lots_of_empty_files
+
+You’re done. Check the results with df -i command again. You should see something like this:
+
+Filesystem            Inodes   IUsed   IFree IUse% Mounted on
+
+/dev/xvda            2080768  284431 1796337   14% /
+tmpfs                  92187       3   92184    1% /lib/init/rw
+varrun                 92187      38   92149    1% /var/run
+varlock                92187       4   92183    1% /var/lock
+udev                   92187    4404   87783    5% /dev
+tmpfs                  92187       1   92186    1% /dev/sh
